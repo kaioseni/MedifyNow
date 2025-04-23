@@ -12,7 +12,7 @@ public class TipoExame
     public string Descricao { get; set; }
 
     [Required]
-    public double DuracaoPadrao { get; set; }
+    public TimeSpan DuracaoPadrao { get; set; }
 
     [Required]
     public string InstrucoesPreparo { get; set; }
