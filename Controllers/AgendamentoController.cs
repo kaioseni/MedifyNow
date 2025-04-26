@@ -21,6 +21,7 @@ public class AgendamentoController : ControllerBase
         try
         {
             return Ok(await context.Agendamentos.ToListAsync());
+            //return Ok(await context.Agendamentos.Include(p => p.TipoExame).ToListAsync()); --> Para preencher o objeto TipoExame com seus respectivos dados
         }
         catch
         {
