@@ -29,6 +29,9 @@ public class AdministradorController : ControllerBase
     [HttpPost]
     public async Task<ActionResult> Post([FromBody]Administrador item)
     {
+        if (await context.Administrador.AnyAsync())
+        return BadRequest("Administrador já foi cadastrado.");
+
         try
         {
             item.TempoMaximoAtraso = 0;
