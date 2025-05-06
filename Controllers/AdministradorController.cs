@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -22,7 +23,7 @@ public class AdministradorController : ControllerBase
         }
         catch
         {
-            return BadRequest("Erro ao listar os agendamentos");
+            return BadRequest("Erro ao buscar Administrador");
         }
     }
 
@@ -34,6 +35,10 @@ public class AdministradorController : ControllerBase
 
         try
         {
+            var hasher = new PasswordHasher<Administrador>();
+
+            item.Senha = hasher.HashPassword(item, item.Senha);
+
             item.TempoMaximoAtraso = 0;
             await context.Administrador.AddAsync(item);
             await context.SaveChangesAsync();

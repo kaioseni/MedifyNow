@@ -66,7 +66,7 @@ public class TipoExameController : ControllerBase
     try
     {   
         if(!await context.TipoExames.AnyAsync(p => p.Id == id))
-            return NotFound("Tipo de curso inválido");
+            return NotFound("Tipo de exame inválido");
         context.TipoExames.Update(model);
         await context.SaveChangesAsync();
         return Ok("Tipo de exame salvo com sucesso");
@@ -85,7 +85,7 @@ public class TipoExameController : ControllerBase
             TipoExame model = await context.TipoExames.FindAsync(id);
 
             if(model == null)
-                return NotFound("Tipo de curso inválido");
+                return NotFound("Tipo de exame inválido");
 
             context.TipoExames.Remove(model);
             await context.SaveChangesAsync();

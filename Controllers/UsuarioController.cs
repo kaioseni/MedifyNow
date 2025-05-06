@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 
 [Route("api/[controller]")]
 [ApiController]
@@ -22,7 +23,7 @@ public class UsuarioController : ControllerBase
         }
         catch
         {
-            return BadRequest("Erro ao listar os Usuarios");
+            return BadRequest("Erro ao listar os usuarios");
         }
     }
 
@@ -31,6 +32,10 @@ public class UsuarioController : ControllerBase
     {
         try
         {
+            var hasher = new PasswordHasher<Usuario>();
+
+            item.Senha = hasher.HashPassword(item, item.Senha);
+
             item.Ativo = true;
             await context.Usuarios.AddAsync(item);
             await context.SaveChangesAsync();
@@ -68,6 +73,10 @@ public class UsuarioController : ControllerBase
         if(!await context.Usuarios.AnyAsync(p => p.Id == id))
             return NotFound("Usuário inválido");
 
+        var hasher = new PasswordHasher<Usuario>();
+
+        model.Senha = hasher.HashPassword(model, model.Senha);
+
         model.Ativo = true;
         context.Usuarios.Update(model);
         await context.SaveChangesAsync();
@@ -87,7 +96,7 @@ public class UsuarioController : ControllerBase
             Usuario model = await context.Usuarios.FindAsync(id);
 
             if(model == null)
-                return NotFound("Tipo de usuário");
+                return NotFound("Tipo de usuário inválido");
 
             context.Usuarios.Remove(model);
             await context.SaveChangesAsync();

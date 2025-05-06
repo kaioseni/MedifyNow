@@ -37,7 +37,7 @@ public class AgendamentoController : ControllerBase
 
             await context.Agendamentos.AddAsync(item);
             await context.SaveChangesAsync();
-            return Ok("Tipo de agendamento salvo com sucesso");
+            return Ok("Agendamento salvo com sucesso");
         }
         catch 
         {
@@ -69,16 +69,15 @@ public class AgendamentoController : ControllerBase
     try
     {   
         if(!await context.Agendamentos.AnyAsync(p => p.Id == id))
-            return NotFound("Agendamento inválidoooo");
+            return NotFound("Agendamento inválido");
             
         context.Agendamentos.Update(model);
         await context.SaveChangesAsync();
         return Ok("Agendamento salvo com sucesso");
     }
-     catch (Exception ex)
+     catch
      {
-        //return BadRequest("Erro ao salvar o agendamento informado" );
-        return BadRequest($"Erro ao salvar o agendamento: {ex.Message}");
+        return BadRequest("Erro ao salvar o agendamento informado");
      }   
     }
 

@@ -142,3 +142,10 @@ D:\MedifyNow\MedifyNow\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Drawing.C
 D:\MedifyNow\MedifyNow\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Runtime.Caching.dll
 D:\MedifyNow\MedifyNow\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Security.Cryptography.ProtectedData.dll
 D:\MedifyNow\MedifyNow\bin\Debug\net8.0\runtimes\win\lib\net6.0\System.Windows.Extensions.dll
+D:\MedifyNow\MedifyNow\bin\Debug\net8.0\Microsoft.Extensions.Diagnostics.Abstractions.dll
+D:\MedifyNow\MedifyNow\bin\Debug\net8.0\Microsoft.Extensions.Hosting.Abstractions.dll
+D:\MedifyNow\MedifyNow\bin\Debug\net8.0\Microsoft.Extensions.ObjectPool.dll
+D:\MedifyNow\MedifyNow\bin\Debug\net8.0\Microsoft.Extensions.WebEncoders.dll
+D:\MedifyNow\MedifyNow\bin\Debug\net8.0\System.Security.Cryptography.Pkcs.dll
+D:\MedifyNow\MedifyNow\bin\Debug\net8.0\System.Security.Cryptography.Xml.dll
+D:\MedifyNow\MedifyNow\bin\Debug\net8.0\runtimes\win\lib\net8.0\System.Security.Cryptography.Pkcs.dll
