@@ -28,10 +28,10 @@ public class AdministradorController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult> Post([FromBody]Administrador item)
+    public async Task<ActionResult> Post([FromBody] Administrador item)
     {
         if (await context.Administrador.AnyAsync())
-        return BadRequest("Administrador já foi cadastrado.");
+            return BadRequest("Administrador já foi cadastrado.");
 
         try
         {
@@ -44,7 +44,7 @@ public class AdministradorController : ControllerBase
             await context.SaveChangesAsync();
             return Ok("Administrador salvo com sucesso");
         }
-        catch 
+        catch
         {
             return BadRequest("Erro ao salvar o administrador");
         }
@@ -56,7 +56,7 @@ public class AdministradorController : ControllerBase
         try
         {
             var admin = await context.Administrador.FirstOrDefaultAsync();
-            if(admin == null)
+            if (admin == null)
                 return NotFound("Administrador não encontrado.");
 
             admin.Nome = model.Nome;
@@ -69,7 +69,58 @@ public class AdministradorController : ControllerBase
         catch
         {
             return BadRequest("Erro ao atualizar o administrador");
-        }   
+        }
     }
-    
+
+    [HttpPatch("TempoAtraso")]
+    public async Task<ActionResult> AtualizarTempoAtraso([FromBody] int novoTempo)
+    {
+        var admin = await context.Administrador.FirstOrDefaultAsync();
+        if (admin == null)
+            return NotFound("Administrador não encontrado.");
+
+        admin.TempoMaximoAtraso = novoTempo;
+
+        try
+        {
+            admin.TempoMaximoAtraso = novoTempo;
+            await context.SaveChangesAsync();
+            return Ok("Tempo máximo de atraso atualizado com sucesso.");
+        }
+        catch
+        {
+            return BadRequest("Erro ao atualizar o tempo de atraso.");
+        }
+    }
+
+    [HttpGet("TotalUsuarios")]
+    public async Task<ActionResult> TotalUsuarios()
+    {
+        try
+        {
+            var totalUsuarios = await context.Usuarios.CountAsync();
+
+            return Ok($"Toal de Usuarios: {totalUsuarios}");
+        }
+        catch
+        {
+            return StatusCode(500, "Erro ao recuperar os dados do dashboard.");
+        }
+    }
+
+     [HttpGet("TotalExames")]
+    public async Task<ActionResult> TotalExames()
+    {
+        try
+        {
+            var TotalExames = await context.TipoExames.CountAsync();
+
+            return Ok($"Toal de Exames: {TotalExames}");
+        }
+        catch
+        {
+            return StatusCode(500, "Erro ao recuperar os dados do dashboard.");
+        }
+    }
+
 }
