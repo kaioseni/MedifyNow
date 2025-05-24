@@ -167,39 +167,57 @@ namespace MedifyNow.Controllers
             return Ok("Senha atualizada com sucesso.");
         }
 
-        [HttpPost("EsqueciSenha/{id}")]
-        public async Task<IActionResult> EsqueciSenha(int id)
+        [HttpPost("EsqueciSenha/{tipo}/{id}")]
+        public async Task<IActionResult> EsqueciSenha(string tipo, int id)
         {
-            var usuario = await context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
 
-            if (usuario == null)
-                return NotFound("Usuário não encontrado.");
+            if (tipo.ToLower() == "usuario")
+            {
+                var usuario = await context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
+                if (usuario == null)
+                    return NotFound("Usuário não encontrado.");
 
-            await GerarCodAleatorio(usuario);
+                await GerarCodAleatorio(usuario.Email, usuario.Nome, usuario);
+            }
+            else if (tipo.ToLower() == "admin")
+            {
+                var admin = await context.Administrador.FirstOrDefaultAsync(a => a.Id == id);
+                if (admin == null)
+                    return NotFound("Administrador não encontrado.");
+
+                await GerarCodAleatorio(admin.Email, admin.Nome, admin);
+            }
+            else
+            {
+                return BadRequest("Tipo inválido. Use 'usuario' ou 'admin'.");
+            }
 
             return Ok("Código enviado para o e-mail cadastrado.");
         }
 
-        private async Task GerarCodAleatorio(Usuario item)
+        private async Task GerarCodAleatorio(string email, string nome, dynamic item)
         {
             item.CodVerificacao = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
 
             await context.SaveChangesAsync();
+
             try
             {
-                var mensagem = new MailMessage();
-                mensagem.From = new MailAddress("noreply.medifynow@gmail.com", "MedifyNow");
-                mensagem.To.Add(item.Email);
-                mensagem.Subject = "Solicitação de alteração de senha";
-                mensagem.Body = $@"Olá {item.Nome},
+                var mensagem = new MailMessage
+                {
+                    From = new MailAddress("noreply.medifynow@gmail.com", "MedifyNow"),
+                    Subject = "Solicitação de alteração de senha",
+                    Body = $@"Olá {nome},
 
-        Seu código para redefinir sua senha é: {item.CodVerificacao}
+                    Seu código para redefinir sua senha é: {item.CodVerificacao}
 
-        Atenciosamente,
-        Equipe MedifyNow";
+                    Atenciosamente,
+                    Equipe MedifyNow"
+                };
+
+                mensagem.To.Add(email);
 
                 using var smtp = new SmtpClient("smtp.gmail.com")
-
                 {
                     Port = 587,
                     Credentials = new NetworkCredential("noreply.medifynow@gmail.com", "chrv tmqg rnwq nvnk"),
@@ -208,7 +226,6 @@ namespace MedifyNow.Controllers
 
                 await smtp.SendMailAsync(mensagem);
             }
-
             catch (Exception ex)
             {
                 Console.WriteLine("Erro ao enviar e-mail: " + ex.Message);
@@ -216,45 +233,85 @@ namespace MedifyNow.Controllers
             }
         }
 
-        [HttpPost("RedefinirSenha")]
-        public async Task<IActionResult> RedefinirSenha([FromBody] ConfirmarTrocaSenhaDto dto)
+        [HttpPost("RedefinirSenha/{tipo}")]
+        public async Task<IActionResult> RedefinirSenha(string tipo, [FromBody] ConfirmarTrocaSenhaDto dto)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var usuario = await context.Usuarios.FirstOrDefaultAsync(u => u.Id == dto.Id);
-
-            if (usuario == null)
-                return NotFound("Usuário não encontrado.");
-
-            if (usuario.CodVerificacao != dto.CodVerificacao)
-                return BadRequest("Código de verificação inválido.");
-
-            var resultado = _hasherUsuario.VerifyHashedPassword(usuario, usuario.Senha, dto.NovaSenha);
-
-            if (resultado == PasswordVerificationResult.Success)
+            if (tipo.ToLower() == "usuario")
             {
-                return BadRequest("A nova senha não pode ser igual à senha atual.");
+                var usuario = await context.Usuarios.FirstOrDefaultAsync(u => u.Id == dto.Id);
+
+                if (usuario == null)
+                    return NotFound("Usuário não encontrado.");
+
+                if (usuario.CodVerificacao != dto.CodVerificacao)
+                    return BadRequest("Código de verificação inválido.");
+
+                var resultado = _hasherUsuario.VerifyHashedPassword(usuario, usuario.Senha, dto.NovaSenha);
+
+                if (resultado == PasswordVerificationResult.Success)
+                    return BadRequest("A nova senha não pode ser igual à senha atual.");
+
+                usuario.Senha = _hasherUsuario.HashPassword(usuario, dto.NovaSenha);
+                usuario.CodVerificacao = null;
+
+                context.Usuarios.Update(usuario);
+            }
+            else if (tipo.ToLower() == "admin")
+            {
+                var admin = await context.Administrador.FirstOrDefaultAsync(a => a.Id == dto.Id);
+
+                if (admin == null)
+                    return NotFound("Administrador não encontrado.");
+
+                if (admin.CodVerificacao != dto.CodVerificacao)
+                    return BadRequest("Código de verificação inválido.");
+
+                var resultado = _hasherAdmin.VerifyHashedPassword(admin, admin.Senha, dto.NovaSenha);
+
+                if (resultado == PasswordVerificationResult.Success)
+                    return BadRequest("A nova senha não pode ser igual à senha atual.");
+
+                admin.Senha = _hasherAdmin.HashPassword(admin, dto.NovaSenha);
+                admin.CodVerificacao = null;
+
+                context.Administrador.Update(admin);
+            }
+            else
+            {
+                return BadRequest("Tipo inválido. Use 'usuario' ou 'admin'.");
             }
 
-            usuario.Senha = _hasherUsuario.HashPassword(usuario, dto.NovaSenha);
-            usuario.CodVerificacao = null;
-
-            context.Usuarios.Update(usuario);
             await context.SaveChangesAsync();
 
             return Ok("Senha atualizada com sucesso.");
         }
 
-        [HttpPost("TrocaEmail/{id}")]
-        public async Task<IActionResult> TrocaEmail(int id, [FromBody] TrocaEmailDto dto)
+        [HttpPost("TrocaEmail/{tipo}/{id}")]
+        public async Task<IActionResult> TrocaEmail(string tipo, int id, [FromBody] TrocaEmailDto dto)
         {
-            var usuario = await context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
-            if (usuario == null)
-                return NotFound("Usuário não encontrado.");
+            dynamic item;
 
-            usuario.CodVerificacao = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
-            usuario.EmailTemporario = dto.NovoEmail;
+            if (tipo.ToLower() == "usuario")
+            {
+                item = await context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
+            }
+            else if (tipo.ToLower() == "admin")
+            {
+                item = await context.Administrador.FirstOrDefaultAsync(a => a.Id == id);
+            }
+            else
+            {
+                return BadRequest("Tipo inválido. Use 'usuario' ou 'admin'.");
+            }
+
+            if (item == null)
+                return NotFound($"{tipo} não encontrado.");
+
+            item.CodVerificacao = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
+            item.EmailTemporario = dto.NovoEmail;
 
             await context.SaveChangesAsync();
 
@@ -264,12 +321,12 @@ namespace MedifyNow.Controllers
                 mensagem.From = new MailAddress("noreply.medifynow@gmail.com", "MedifyNow");
                 mensagem.To.Add(dto.NovoEmail);
                 mensagem.Subject = "Confirmação de troca de e-mail";
-                mensagem.Body = $@"Olá {usuario.Nome},
+                mensagem.Body = $@"Olá {item.Nome},
 
-                    Seu código para confirmar a troca de e-mail é: {usuario.CodVerificacao}
+                Seu código para confirmar a troca de e-mail é: {item.CodVerificacao}
 
-                    Atenciosamente,
-                    Equipe MedifyNow";
+                Atenciosamente,
+                Equipe MedifyNow";
 
                 using var smtp = new SmtpClient("smtp.gmail.com")
                 {
@@ -289,22 +346,36 @@ namespace MedifyNow.Controllers
             return Ok("Código de verificação enviado ao novo e-mail.");
         }
 
-        [HttpPost("ConfirmarTrocaEmail/{id}")]
-        public async Task<IActionResult> ConfirmarTrocaEmail(int id, [FromBody] ConfirmarTrocaEmailDto  dto)
+        [HttpPost("ConfirmarTrocaEmail/{tipo}/{id}")]
+        public async Task<IActionResult> ConfirmarTrocaEmail(string tipo, int id, [FromBody] ConfirmarTrocaEmailDto dto)
         {
-            var usuario = await context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
-            if (usuario == null)
-                return NotFound("Usuário não encontrado.");
+            dynamic item;
 
-            if (usuario.CodVerificacao != dto.Codigo)
+            if (tipo.ToLower() == "usuario")
+            {
+                item = await context.Usuarios.FirstOrDefaultAsync(u => u.Id == id);
+            }
+            else if (tipo.ToLower() == "admin")
+            {
+                item = await context.Administrador.FirstOrDefaultAsync(a => a.Id == id);
+            }
+            else
+            {
+                return BadRequest("Tipo inválido. Use 'usuario' ou 'admin'.");
+            }
+
+            if (item == null)
+                return NotFound($"{tipo} não encontrado.");
+
+            if (item.CodVerificacao != dto.Codigo)
                 return BadRequest("Código de verificação inválido.");
 
-            if (string.IsNullOrEmpty(usuario.EmailTemporario))
+            if (string.IsNullOrEmpty(item.EmailTemporario))
                 return BadRequest("Não há solicitação de troca de e-mail pendente.");
 
-            usuario.Email = usuario.EmailTemporario;
-            usuario.EmailTemporario = null;
-            usuario.CodVerificacao = null;
+            item.Email = item.EmailTemporario;
+            item.EmailTemporario = null;
+            item.CodVerificacao = null;
 
             await context.SaveChangesAsync();
 

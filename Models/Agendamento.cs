@@ -27,4 +27,8 @@ public class Agendamento
 
     [Required]
     public DateTime DataHoraExame { get; set; }
+
+    public bool? Cancelado { get; set; }
+
+    public bool? Comparecimento { get; set; }
 }
