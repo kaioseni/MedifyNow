@@ -33,13 +33,13 @@ public class AgendamentoController : ControllerBase
         context = _context;
     }
 
+    //RF07 - Agendamento de exames - realiza GET em todos os agendamentos
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Agendamento>>> Get()
     {
         try
         {
             return Ok(await context.Agendamentos.ToListAsync());
-            //return Ok(await context.Agendamentos.Include(p => p.TipoExame).ToListAsync()); --> Para preencher o objeto TipoExame com seus respectivos dados
         }
         catch
         {
@@ -47,6 +47,7 @@ public class AgendamentoController : ControllerBase
         }
     }
 
+    //RF07 - Agendamento de exames - Cadastra um novo agendamento e envia um e-mail(paciente) ao e-mail informado no momento do agendamento
     [HttpPost]
     public async Task<ActionResult> Post([FromBody] CriarAgendamentoDto dto)
     {
@@ -106,6 +107,7 @@ public class AgendamentoController : ControllerBase
         }
     }
 
+    //RF07 - Agendamento de exames - Realiza GET em um agendamento informado o ID
     [HttpGet("{id}")]
     public async Task<ActionResult<Agendamento>> Get([FromRoute] int id)
     {
@@ -122,6 +124,7 @@ public class AgendamentoController : ControllerBase
         }
     }
 
+    //RF07 - Agendamento de exames - Realiza a alteração dos dados de um agendamento
     [HttpPut("{id}")]
     public async Task<ActionResult> Put([FromRoute] int id, [FromBody] Agendamento model)
     {
@@ -193,24 +196,48 @@ public class AgendamentoController : ControllerBase
         }
     }
 
+    //RF07 - Agendamento de exames && RF08 - Informar comparecimento de paciente - Realiza a pesquisa com base no CPF do paciente e atribui comparecimento do paciente com base no RF08 - Informar comparecimento de paciente
     [HttpGet("pesquisaCPF/{CPF}")]
-    public async Task<ActionResult<IEnumerable<Agendamento>>> Get([FromRoute] string CPF)
+    public async Task<ActionResult> Get([FromRoute] string CPF)
     {
         try
         {
-            var agendamento = await context.Agendamentos.FirstOrDefaultAsync(p => p.CPF == CPF);
+            var hoje = DateTime.Today;
 
-            if (agendamento == null)
-                return NotFound("Agendamento não encontrado.");
+            var agendamentos = await context.Agendamentos
+                .Include(a => a.TipoExame) 
+                .Where(a => a.CPF == CPF && a.DataHoraExame.Date == hoje)
+                .ToListAsync();
 
-            if (!agendamento.Comparecimento.GetValueOrDefault())
+            if (agendamentos == null || !agendamentos.Any())
+                return NotFound("Nenhum agendamento encontrado para hoje.");
+
+            foreach (var agendamento in agendamentos)
             {
-                agendamento.Comparecimento = true;
-                context.Agendamentos.Update(agendamento);
-                await context.SaveChangesAsync();
+                if (!agendamento.Comparecimento.GetValueOrDefault())
+                {
+                    agendamento.Comparecimento = true;
+                }
             }
 
-            return Ok("Comparecimento confirmado com sucesso.");
+            await context.SaveChangesAsync();
+
+            var nomePaciente = agendamentos.First().Nome;
+
+            var exames = agendamentos.Select(a => new
+            {
+                Exame = a.TipoExame?.Nome ?? "Não especificado",
+                Horario = a.DataHoraExame.ToString("HH:mm"),
+                Instrucoes = a.TipoExame?.InstrucoesPreparo ?? "Nenhuma instrução fornecida."
+            });
+
+            var resposta = new
+            {
+                Mensagem = $"Bem-vindo(a), {nomePaciente}!",
+                Exames = exames
+            };
+
+            return Ok(resposta);
         }
         catch (Exception ex)
         {
@@ -218,6 +245,7 @@ public class AgendamentoController : ControllerBase
         }
     }
 
+    //RF07 - Agendamento de exames - Realiza cancelamento em um agendamento
     [HttpPost("CancelarAgendamento/{id}")]
     public async Task<IActionResult> CancelarAgendamento(int id)
     {

@@ -13,6 +13,7 @@ public class TipoExameController : ControllerBase
         context = _context;
     }
     
+    //RF04 - Manutenção de tipos de exames - Realiza o get em todos os tipos de exames cadastrados
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TipoExame>>> Get()
     {
@@ -26,6 +27,7 @@ public class TipoExameController : ControllerBase
         }
     }
 
+    //RF04 - Manutenção de tipos de exames - Realiza cadastro de um novo tipo de exame
     [HttpPost]
     public async Task<ActionResult> Post([FromBody]TipoExame item)
     {
@@ -42,6 +44,7 @@ public class TipoExameController : ControllerBase
         }
     }
 
+    //RF04 - Manutenção de tipos de exames - Altera os dados de um tipo de exame com base eu seu ID
     [HttpGet("{id}")]
     public async Task<ActionResult<TipoExame>> Get([FromRoute] int id)
     {
@@ -58,6 +61,7 @@ public class TipoExameController : ControllerBase
         }
     }
 
+    //RF04 - Manutenção de tipos de exames - Altera os dados de um Tipo de exame
     [HttpPut("{id}")]
     public async Task<ActionResult> Put([FromRoute] int id, [FromBody] TipoExame model)
     {
@@ -77,6 +81,7 @@ public class TipoExameController : ControllerBase
      }   
     }
 
+    //RF04 - Manutenção de tipos de exames - Alterar pois o mesmo nao pode ser excluido caso não haja nenhum agendamento finalizado ou que ainda será atendido
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete([FromRoute] int id)
     {

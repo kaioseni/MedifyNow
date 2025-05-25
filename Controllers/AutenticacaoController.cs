@@ -89,7 +89,7 @@ namespace MedifyNow.Controllers
             _hasherUsuario = hasherUsuario;
         }
 
-
+        //RF02 - Página inicial - Recebe e-mail e senha para realizar login
         [HttpPost("Login")]
         public async Task<IActionResult> Post([FromBody] LoginRequest item)
         {
@@ -141,6 +141,7 @@ namespace MedifyNow.Controllers
             return Unauthorized(new { Erro = "E-mail ou senha inválidos." });
         }
 
+        //RF05 - Manutenção de usuários para Usuarios - Usuário do tipo secratária inputam a senha temporária enviada ao e-mail e realizam a troca de senha
         [HttpPost("PrimeiroAcesso")]
         public async Task<IActionResult> PrimeiroAcesso([FromBody] TrocaSenhaDto dto)
         {
@@ -167,6 +168,7 @@ namespace MedifyNow.Controllers
             return Ok("Senha atualizada com sucesso.");
         }
 
+        //RF06 - Redefinição de senha - Usuario do tipo secretária e administrador solicitam a troca de senha, código aleatorio é enviado ao e-mail cadastrado para redefinir senha
         [HttpPost("EsqueciSenha/{tipo}/{id}")]
         public async Task<IActionResult> EsqueciSenha(string tipo, int id)
         {
@@ -177,7 +179,7 @@ namespace MedifyNow.Controllers
                 if (usuario == null)
                     return NotFound("Usuário não encontrado.");
 
-                await GerarCodAleatorio(usuario.Email, usuario.Nome, usuario);
+                await GerarCodAleatorio(usuario.Email, usuario.Nome, usuario); //chama função GerarCodAleatorio
             }
             else if (tipo.ToLower() == "admin")
             {
@@ -185,7 +187,7 @@ namespace MedifyNow.Controllers
                 if (admin == null)
                     return NotFound("Administrador não encontrado.");
 
-                await GerarCodAleatorio(admin.Email, admin.Nome, admin);
+                await GerarCodAleatorio(admin.Email, admin.Nome, admin); //chama função GerarCodAleatorio
             }
             else
             {
@@ -195,6 +197,7 @@ namespace MedifyNow.Controllers
             return Ok("Código enviado para o e-mail cadastrado.");
         }
 
+        //RF06 - Redefinição de senha - Gera codigo aleatorio
         private async Task GerarCodAleatorio(string email, string nome, dynamic item)
         {
             item.CodVerificacao = Guid.NewGuid().ToString().Substring(0, 6).ToUpper();
@@ -233,7 +236,8 @@ namespace MedifyNow.Controllers
             }
         }
 
-        [HttpPost("RedefinirSenha/{tipo}")]
+        //RF06 - Redefinição de senha - Com base no código aleatorio recebido o endpoint verifica se o codigo é o mesmo enviado ao e-mail e realiza a troca de senha para a nova senha informada pelo usuario
+        [HttpPost("RedefinirSenha/{tipo}")] 
         public async Task<IActionResult> RedefinirSenha(string tipo, [FromBody] ConfirmarTrocaSenhaDto dto)
         {
             if (!ModelState.IsValid)
@@ -289,6 +293,7 @@ namespace MedifyNow.Controllers
             return Ok("Senha atualizada com sucesso.");
         }
 
+        //RF05 - Manutenção de usuários - Solicitação de troca de email - Gera um código aleatorio e envia ao novo e-mail informado
         [HttpPost("TrocaEmail/{tipo}/{id}")]
         public async Task<IActionResult> TrocaEmail(string tipo, int id, [FromBody] TrocaEmailDto dto)
         {
@@ -346,6 +351,7 @@ namespace MedifyNow.Controllers
             return Ok("Código de verificação enviado ao novo e-mail.");
         }
 
+        //RF05 - Manutenção de usuários - Realiza a troca de e-maail com a validação do código enviado ao novo e-mail
         [HttpPost("ConfirmarTrocaEmail/{tipo}/{id}")]
         public async Task<IActionResult> ConfirmarTrocaEmail(string tipo, int id, [FromBody] ConfirmarTrocaEmailDto dto)
         {

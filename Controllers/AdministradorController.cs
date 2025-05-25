@@ -1,12 +1,18 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using System.ComponentModel.DataAnnotations;
 
 [Route("api/[controller]")]
 [ApiController]
 
 public class AdministradorController : ControllerBase
 {
+    public class AdministradorDto
+    {
+        [Required]
+        public string Nome { get; set; }
+    }
     private readonly DataContext context;
 
     public AdministradorController(DataContext _context)
@@ -14,6 +20,8 @@ public class AdministradorController : ControllerBase
         context = _context;
     }
 
+
+    //RF01 - Primeira execução - Realiza get no usuario do tipo administrador
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Administrador>>> Get()
     {
@@ -27,6 +35,7 @@ public class AdministradorController : ControllerBase
         }
     }
 
+    //RF01 - Primeira execução - Realiza o cadastro no usuario administrador
     [HttpPost]
     public async Task<ActionResult> Post([FromBody] Administrador item)
     {
@@ -50,8 +59,9 @@ public class AdministradorController : ControllerBase
         }
     }
 
-    [HttpPut]
-    public async Task<ActionResult> Put([FromBody] Administrador model)
+    //RF01 - Primeira execução - Realiza alteração no nome do usuario administrador
+    [HttpPatch]
+    public async Task<ActionResult> Patch([FromBody] AdministradorDto dto)
     {
         try
         {
@@ -59,19 +69,18 @@ public class AdministradorController : ControllerBase
             if (admin == null)
                 return NotFound("Administrador não encontrado.");
 
-            admin.Nome = model.Nome;
-            admin.Email = model.Email;
-            admin.Senha = model.Senha;
+            admin.Nome = dto.Nome;
 
             await context.SaveChangesAsync();
-            return Ok("Administrador salvo com sucesso");
+            return Ok("Nome do administrador atualizado com sucesso.");
         }
         catch
         {
-            return BadRequest("Erro ao atualizar o administrador");
+            return BadRequest("Erro ao atualizar o administrador.");
         }
     }
 
+    //RF01 - Primeira execução - Usuario administrador escolhe o tempo maximo de atraso de um paciente
     [HttpPatch("TempoAtraso")]
     public async Task<ActionResult> AtualizarTempoAtraso([FromBody] int novoTempo)
     {
@@ -93,6 +102,7 @@ public class AdministradorController : ControllerBase
         }
     }
 
+    //RF03 - Dashboard de usuário - Retorna o total de usuarios do tipo secretaria
     [HttpGet("TotalUsuarios")]
     public async Task<ActionResult> TotalUsuarios()
     {
@@ -108,7 +118,8 @@ public class AdministradorController : ControllerBase
         }
     }
 
-     [HttpGet("TotalExames")]
+    //RF03 - Dashboard de usuário - Retorna o total do tipo de exames cadastrados no sistema
+    [HttpGet("TotalExames")]
     public async Task<ActionResult> TotalExames()
     {
         try

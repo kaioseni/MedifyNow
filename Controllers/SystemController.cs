@@ -13,6 +13,7 @@ public class SystemController : ControllerBase
         context = _context;
     }
 
+    //RF01 - Primeira execução - Valida se já existe usuario do tipo Administrador
     [HttpGet]
     public async Task<ActionResult<bool>> Get()
     {

@@ -26,8 +26,15 @@ public class UsuarioCreateRequest
 
 public class UsuarioController : ControllerBase
 {
+    public class UsuarioDto
+    {
+        [Required]
+        public string Nome { get; set; }
 
-    
+        public string FotoUrl { get; set; }
+    }
+
+
     private readonly DataContext context;
 
     public UsuarioController(DataContext _context)
@@ -35,6 +42,7 @@ public class UsuarioController : ControllerBase
         context = _context;
     }
 
+    //RF05 - Manutenção de usuários - Get de todos os usarios do tipo secretária 
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Usuario>>> Get()
     {
@@ -48,6 +56,7 @@ public class UsuarioController : ControllerBase
         }
     }
 
+    //RF05 - Manutenção de usuários - Cadastra novo usuario do tipo secretaria  e envia senha aleatoria ao e-mail informado
     [HttpPost]
     public async Task<ActionResult> Post([FromBody] Usuario item)
     {
@@ -55,10 +64,6 @@ public class UsuarioController : ControllerBase
         {
             var senhaTemporaria = GerarSenhaAleatoria();
 
-
-            /*var hasher = new PasswordHasher<Usuario>();
-
-            item.Senha = hasher.HashPassword(item, item.Senha);*/
             var hasher = new PasswordHasher<Usuario>();
             item.Senha = hasher.HashPassword(item, senhaTemporaria);
             item.Ativo = true;
@@ -76,6 +81,7 @@ public class UsuarioController : ControllerBase
         }
     }
 
+    //RF05 - Manutenção de usuários - Realiza envio de senha aleatoria gerada
     private string GerarSenhaAleatoria(int comprimento = 12)
     {
         const string caracteres = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890@$!%*?&";
@@ -84,15 +90,16 @@ public class UsuarioController : ControllerBase
             .Select(s => s[random.Next(s.Length)]).ToArray());
     }
 
+    //RF05 - Manutenção de usuários - Realiza envio de e-mail ao final do cadastro do usuario do tipo secretaria
     private async Task EnviarEmailBoasVindas(string senhaGerada, Usuario item)
-{
-    try
     {
-        var mensagem = new MailMessage();
-        mensagem.From = new MailAddress("noreply.medifynow@gmail.com", "MedifyNow");
-        mensagem.To.Add(item.Email);
-        mensagem.Subject = "Bem-vindo ao MedifyNow!";
-        mensagem.Body = $@"Olá {item.Nome},
+        try
+        {
+            var mensagem = new MailMessage();
+            mensagem.From = new MailAddress("noreply.medifynow@gmail.com", "MedifyNow");
+            mensagem.To.Add(item.Email);
+            mensagem.Subject = "Bem-vindo ao MedifyNow!";
+            mensagem.Body = $@"Olá {item.Nome},
 
         Bem-vindo(a) ao sistema MedifyNow!
 
@@ -103,23 +110,23 @@ public class UsuarioController : ControllerBase
         Atenciosamente,
         Equipe MedifyNow";
 
-        using var smtp = new SmtpClient("smtp.gmail.com")
+            using var smtp = new SmtpClient("smtp.gmail.com")
+            {
+                Port = 587,
+                Credentials = new NetworkCredential("noreply.medifynow@gmail.com", "chrv tmqg rnwq nvnk"),
+                EnableSsl = true
+            };
+
+            await smtp.SendMailAsync(mensagem);
+        }
+        catch (Exception ex)
         {
-            Port = 587,
-            Credentials = new NetworkCredential("noreply.medifynow@gmail.com", "chrv tmqg rnwq nvnk"),
-            EnableSsl = true
-        };
-
-        await smtp.SendMailAsync(mensagem);
+            Console.WriteLine("Erro ao enviar e-mail: " + ex.Message);
+            throw;
+        }
     }
-    catch (Exception ex)
-    {
-        // Aqui você pode logar o erro ou simplesmente lançar novamente
-        Console.WriteLine("Erro ao enviar e-mail: " + ex.Message);
-        throw; // Propaga para o método Post lidar com isso
-    }
-}
 
+    //RF05 - Manutenção de usuários - Busca usuario do tipo secretaria pelo ID
     [HttpGet("{id}")]
     public async Task<ActionResult<Usuario>> Get([FromRoute] int id)
     {
@@ -136,31 +143,30 @@ public class UsuarioController : ControllerBase
         }
     }
 
-    [HttpPut("{id}")]
-    public async Task<ActionResult> Put([FromRoute] int id, [FromBody] Usuario model)
+    //RF05 - Manutenção de usuários - Altera nome e Foto dos usuarios do tipo secretaria
+    [HttpPatch("{id}")]
+    public async Task<ActionResult> Patch([FromRoute] int id, [FromBody] UsuarioDto dto)
     {
-        if (id != model.Id)
-            return BadRequest("Usuário inválido");
         try
         {
-            if (!await context.Usuarios.AnyAsync(p => p.Id == id))
-                return NotFound("Usuário inválido");
+            var usuario = await context.Usuarios.FindAsync(id);
+            if (usuario == null)
+                return NotFound("Usuário não encontrado.");
 
-            var hasher = new PasswordHasher<Usuario>();
+            usuario.Nome = dto.Nome;
+            usuario.FotoUrl = dto.FotoUrl;
 
-            model.Senha = hasher.HashPassword(model, model.Senha);
-
-            model.Ativo = true;
-            context.Usuarios.Update(model);
             await context.SaveChangesAsync();
-            return Ok("Usuário salvo com sucesso");
+
+            return Ok("Dados do usuario atualizado com sucesso.");
         }
         catch
         {
-            return BadRequest("Erro ao salvar o usuário informado");
+            return BadRequest("Erro ao atualizar o nome do usuário.");
         }
     }
 
+    //RF05 - Manutenção de usuários - Exlui um usuario do tipo secretaria caso o mesmo nunca tenha realizado login no sistema
     [HttpDelete("{id}")]
     public async Task<ActionResult> Delete([FromRoute] int id)
     {
@@ -184,6 +190,7 @@ public class UsuarioController : ControllerBase
         }
     }
 
+    //RF03 - Dashboard de usuário - Pega o dia atual
     [HttpGet("DataAtual")]
     public async Task<ActionResult> DataAtual()
     {
@@ -199,6 +206,7 @@ public class UsuarioController : ControllerBase
         }
     }
 
+    //RF03 - Dashboard de usuário - Retorna o total d eexames agendados para o dia atual
     [HttpGet("TotalExames")]
     public async Task<ActionResult> TotalExames()
     {
