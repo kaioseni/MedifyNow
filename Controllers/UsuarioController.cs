@@ -101,14 +101,14 @@ public class UsuarioController : ControllerBase
             mensagem.Subject = "Bem-vindo ao MedifyNow!";
             mensagem.Body = $@"Olá {item.Nome},
 
-        Bem-vindo(a) ao sistema MedifyNow!
+Bem-vindo(a) ao sistema MedifyNow!
 
-        Sua senha temporária para acesso é: {senhaGerada}
+Sua senha temporária para acesso é: {senhaGerada}
 
-        Recomendamos alterar a senha após o primeiro login.
+Recomendamos alterar a senha após o primeiro login.
 
-        Atenciosamente,
-        Equipe MedifyNow";
+Atenciosamente,
+Equipe MedifyNow";
 
             using var smtp = new SmtpClient("smtp.gmail.com")
             {

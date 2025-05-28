@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Net.Mail;
+using Microsoft.AspNetCore.Authorization;
 
 
 [Route("api/[controller]")]
@@ -78,17 +79,17 @@ public class AgendamentoController : ControllerBase
             mensagem.Subject = "Novo Agendamento de Exame";
             mensagem.Body = $@"Olá {dto.Nome},
 
-                Seu exame foi agendado com sucesso!
+Seu exame foi agendado com sucesso!
 
-                Dados do agendamento:
-                - Data: {dto.DataHoraExame:dd/MM/yyyy HH:mm}
-                - Exame: {tipoExame?.Nome ?? "Não especificado"}
+Dados do agendamento:
+- Data: {dto.DataHoraExame:dd/MM/yyyy HH:mm}
+- Exame: {tipoExame?.Nome ?? "Não especificado"}
 
-                Instruções de preparo:
-                {tipoExame?.InstrucoesPreparo ?? "Nenhuma instrução fornecida."}
+Instruções de preparo:
+{tipoExame?.InstrucoesPreparo ?? "Nenhuma instrução fornecida."}
 
-                Atenciosamente,
-                Equipe MedifyNow";
+Atenciosamente,
+Equipe MedifyNow";
 
             using var smtp = new SmtpClient("smtp.gmail.com")
             {
@@ -162,17 +163,17 @@ public class AgendamentoController : ControllerBase
 
                 mensagem.Body = $@"Olá {model.Nome},
 
-                Seu agendamento foi alterado com sucesso!
+Seu agendamento foi alterado com sucesso!
 
-                Dados atualizados do agendamento:
-                - Data: {model.DataHoraExame:dd/MM/yyyy HH:mm}
-                - Exame: {tipoExame?.Nome ?? "Não especificado"}
+Dados atualizados do agendamento:
+- Data: {model.DataHoraExame:dd/MM/yyyy HH:mm}
+- Exame: {tipoExame?.Nome ?? "Não especificado"}
 
-                Instruções de preparo:
-                {tipoExame?.InstrucoesPreparo ?? "Nenhuma instrução fornecida."}
+Instruções de preparo:
+{tipoExame?.InstrucoesPreparo ?? "Nenhuma instrução fornecida."}
 
-                Atenciosamente,
-                Equipe MedifyNow";
+Atenciosamente,
+Equipe MedifyNow";
 
                 using var smtp = new SmtpClient("smtp.gmail.com")
                 {
@@ -197,7 +198,7 @@ public class AgendamentoController : ControllerBase
     }
 
     //RF07 - Agendamento de exames && RF08 - Informar comparecimento de paciente - Realiza a pesquisa com base no CPF do paciente e atribui comparecimento do paciente com base no RF08 - Informar comparecimento de paciente
-    [HttpGet("pesquisaCPF/{CPF}")]
+    [HttpGet("PesquisaCPF/{CPF}")]
     public async Task<ActionResult> Get([FromRoute] string CPF)
     {
         try
@@ -205,7 +206,7 @@ public class AgendamentoController : ControllerBase
             var hoje = DateTime.Today;
 
             var agendamentos = await context.Agendamentos
-                .Include(a => a.TipoExame) 
+                .Include(a => a.TipoExame)
                 .Where(a => a.CPF == CPF && a.DataHoraExame.Date == hoje)
                 .ToListAsync();
 
@@ -275,14 +276,14 @@ public class AgendamentoController : ControllerBase
 
             mensagem.Body = $@"Olá {agendamento.Nome},
 
-            Seu agendamento foi cancelado com sucesso.
+Seu agendamento foi cancelado com sucesso.
 
-            Dados do agendamento cancelado:
-            - Data: {agendamento.DataHoraExame:dd/MM/yyyy HH:mm}
-            - Exame: {agendamento.TipoExame?.Nome ?? "Não especificado"}
+Dados do agendamento cancelado:
+- Data: {agendamento.DataHoraExame:dd/MM/yyyy HH:mm}
+- Exame: {agendamento.TipoExame?.Nome ?? "Não especificado"}
 
-            Atenciosamente,
-            Equipe MedifyNow";
+Atenciosamente,
+Equipe MedifyNow";
 
             using var smtp = new SmtpClient("smtp.gmail.com")
             {
@@ -300,4 +301,158 @@ public class AgendamentoController : ControllerBase
 
         return Ok("Agendamento cancelado e e-mail enviado com sucesso.");
     }
+
+    //RF09 - 
+    [HttpGet("Hoje")]
+    public IActionResult GetPainelHoje()
+    {
+        var hoje = DateTime.Today;
+        var agora = DateTime.Now;
+
+        // Buscar todos os agendamentos confirmados de hoje
+        var agendamentosHoje = context.Agendamentos
+            .Where(a => a.DataHoraExame.Date == hoje
+                        && a.Comparecimento == true
+                        && (a.Cancelado == null || a.Cancelado == false))
+            .Include(a => a.TipoExame)
+            .ToList();
+
+        var agrupadoPorTipo = agendamentosHoje
+            .GroupBy(a => a.TipoExameId)
+            .Select(g =>
+            {
+                var tipoExame = g.First().TipoExame;
+                var duracaoPadrao = tipoExame.DuracaoPadrao;
+
+                var tempoMedio = duracaoPadrao;
+
+                var fila = g.OrderBy(a => a.DataHoraExame)
+                            .Select((a, index) => new
+                            {
+                                a.Nome,
+                                a.DataHoraExame,
+                                TempoEstimadoAtendimento = TimeSpan.FromMinutes((index + 1) * tempoMedio.TotalMinutes).ToString(@"hh\:mm\:ss")
+                            }).ToList();
+
+                return new
+                {
+                    tipoExameId = tipoExame.Id,
+                    nome = tipoExame.Nome,
+                    duracaoPadrao = duracaoPadrao.ToString(@"hh\:mm\:ss"),
+                    tempoMedioAtendimento = tempoMedio.ToString(@"hh\:mm\:ss"),
+                    fila = fila
+                };
+            })
+            .ToList();
+
+        var result = new
+        {
+            dataAtual = hoje.ToString("yyyy-MM-dd"),
+            horaAtual = agora.ToString("HH:mm:ss"),
+            tiposExame = agrupadoPorTipo
+        };
+
+        return Ok(result);
+    }
+
+    //RF10 - Ordenação dos pacientes atrasados e pacientes dentro do prazo
+    [HttpGet("ChamadaSecretaria")]
+    //[Authorize(Roles = "secretaria")]
+    public IActionResult GetListaChamada()
+    {
+        var hoje = DateTime.Today;
+        var Administrador = context.Administrador.FirstOrDefault();
+        var tempoMaximoEspera = TimeSpan.FromMinutes(Administrador!.TempoMaximoAtraso);
+
+        var agendamentos = context.Agendamentos
+            .Where(a => a.DataHoraExame.Date == hoje
+                        && a.Comparecimento == true
+                        && (a.Cancelado == null || a.Cancelado == false)
+                        && (a.ConfirmacaoChamada == null || a.ConfirmacaoChamada == false || a.ConfirmacaoChamada == true))
+            .Include(a => a.TipoExame)
+            .ToList();
+
+        var naoAtrasados = new List<dynamic>();
+        var atrasados = new List<dynamic>();
+
+        foreach (var agendamento in agendamentos)
+        {
+            var limiteEspera = agendamento.DataHoraExame + tempoMaximoEspera;
+            var dataConfirmacao = agendamento.ConfirmacaoComparecimento;
+
+            if (dataConfirmacao.HasValue && dataConfirmacao <= limiteEspera)
+            {
+                naoAtrasados.Add(new
+                {
+                    agendamento.Id,
+                    agendamento.Nome,
+                    agendamento.DataHoraExame,
+                    agendamento.ConfirmacaoComparecimento,
+                    TipoExameNome = agendamento.TipoExame?.Nome ?? "Não informado",
+                    Status = "No prazo"
+                });
+            }
+            else
+            {
+                atrasados.Add(new
+                {
+                    agendamento.Id,
+                    agendamento.Nome,
+                    agendamento.DataHoraExame,
+                    agendamento.ConfirmacaoComparecimento,
+                    TipoExameNome = agendamento.TipoExame?.Nome ?? "Não informado",
+                    Status = "Atrasado"
+                });
+            }
+        }
+
+        var listaFinal = naoAtrasados
+            .OrderBy(a => a.DataHoraExame)
+            .Concat(atrasados.OrderBy(a => a.DataHoraExame))
+            .ToList();
+
+        return Ok(listaFinal);
+    }
+
+    //RF10 - Chamada da Secretaria para confirmação de dados do paciente
+    [HttpPost("ChamarPaciente/{id}/chamar")]
+    //[Authorize(Roles = "Secretaria")]
+    public IActionResult ChamarPaciente(int id)
+    {
+        var agendamento = context.Agendamentos.FirstOrDefault(a => a.Id == id);
+
+        if (agendamento == null)
+            return NotFound("Agendamento não encontrado.");
+
+        if (agendamento.ConfirmacaoChamada == true)
+            return BadRequest("Paciente já foi chamado.");
+
+        agendamento.ConfirmacaoChamada = true;
+        agendamento.ConfirmacaoComparecimento = DateTime.Now;
+        context.SaveChanges();
+
+        return Ok(new { message = $"Paciente {agendamento.Nome} chamado com sucesso." });
+    }
+
+    //RF12 - Finalizacao de Exame
+    [HttpPost("FinalizarExame/{id}")]
+    //[Authorize(Roles = "secretaria")]
+    public IActionResult FinalizarExame(int id)
+    {
+        var agendamento = context.Agendamentos.FirstOrDefault(a => a.Id == id);
+
+        if (agendamento == null)
+            return NotFound("Agendamento não encontrado.");
+
+        if (agendamento.DataHoraFinalizacao.HasValue)
+            return BadRequest("Atendimento já foi finalizado.");
+
+        agendamento.DataHoraFinalizacao = DateTime.Now;
+
+        context.SaveChanges();
+
+        return Ok(new { message = "Atendimento finalizado com sucesso." });
+    }
+
+
 }

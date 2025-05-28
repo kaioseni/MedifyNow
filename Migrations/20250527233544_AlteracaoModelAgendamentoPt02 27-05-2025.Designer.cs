@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MedifyNow.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250527233544_AlteracaoModelAgendamentoPt02 27-05-2025")]
+    partial class AlteracaoModelAgendamentoPt0227052025
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -82,9 +85,6 @@ namespace MedifyNow.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DataHoraExame")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DataHoraFinalizacao")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DataNascimento")

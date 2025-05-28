@@ -212,10 +212,10 @@ namespace MedifyNow.Controllers
                     Subject = "Solicitação de alteração de senha",
                     Body = $@"Olá {nome},
 
-                    Seu código para redefinir sua senha é: {item.CodVerificacao}
+Seu código para redefinir sua senha é: {item.CodVerificacao}
 
-                    Atenciosamente,
-                    Equipe MedifyNow"
+Atenciosamente,
+Equipe MedifyNow"
                 };
 
                 mensagem.To.Add(email);
@@ -328,10 +328,10 @@ namespace MedifyNow.Controllers
                 mensagem.Subject = "Confirmação de troca de e-mail";
                 mensagem.Body = $@"Olá {item.Nome},
 
-                Seu código para confirmar a troca de e-mail é: {item.CodVerificacao}
+Seu código para confirmar a troca de e-mail é: {item.CodVerificacao}
 
-                Atenciosamente,
-                Equipe MedifyNow";
+Atenciosamente,
+Equipe MedifyNow";
 
                 using var smtp = new SmtpClient("smtp.gmail.com")
                 {

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MedifyNow.Migrations
 {
     [DbContext(typeof(DataContext))]
-    partial class DataContextModelSnapshot : ModelSnapshot
+    [Migration("20250527224305_AtualizacaoModelAgendamento 27-05-2025")]
+    partial class AtualizacaoModelAgendamento27052025
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -64,6 +67,9 @@ namespace MedifyNow.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<bool?>("Atendido")
+                        .HasColumnType("bit");
+
                     b.Property<string>("CPF")
                         .IsRequired()
                         .HasMaxLength(11)
@@ -75,16 +81,10 @@ namespace MedifyNow.Migrations
                     b.Property<bool?>("Comparecimento")
                         .HasColumnType("bit");
 
-                    b.Property<bool?>("ConfirmacaoChamada")
-                        .HasColumnType("bit");
-
                     b.Property<DateTime?>("ConfirmacaoComparecimento")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DataHoraExame")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("DataHoraFinalizacao")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime>("DataNascimento")

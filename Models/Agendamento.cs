@@ -31,4 +31,9 @@ public class Agendamento
     public bool? Cancelado { get; set; }
 
     public bool? Comparecimento { get; set; }
+
+    public DateTime? ConfirmacaoComparecimento { get; set; }
+    public bool? ConfirmacaoChamada { get; set; }
+
+    public DateTime? DataHoraFinalizacao { get; set; }
 }
