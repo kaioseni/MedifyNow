@@ -27,6 +27,14 @@ public class AgendamentoController : ControllerBase
 
         public CriarAgendamentoDto() { }
     }
+
+    public class AtendimentoRealizadoDto
+    {
+        public string NomePaciente { get; set; }
+        public DateTime DataHoraAgendamento { get; set; }
+        public DateTime? DataHoraInicioAtendimento { get; set; }
+        public DateTime? DataHoraFinalizacao { get; set; }
+    }
     private readonly DataContext context;
 
     public AgendamentoController(DataContext _context)
@@ -302,14 +310,13 @@ Equipe MedifyNow";
         return Ok("Agendamento cancelado e e-mail enviado com sucesso.");
     }
 
-    //RF09 - 
+    //RF09 - Retorna todos agendamentos para o dia atual
     [HttpGet("Hoje")]
     public IActionResult GetPainelHoje()
     {
         var hoje = DateTime.Today;
         var agora = DateTime.Now;
 
-        // Buscar todos os agendamentos confirmados de hoje
         var agendamentosHoje = context.Agendamentos
             .Where(a => a.DataHoraExame.Date == hoje
                         && a.Comparecimento == true
@@ -357,7 +364,6 @@ Equipe MedifyNow";
 
     //RF10 - Ordenação dos pacientes atrasados e pacientes dentro do prazo
     [HttpGet("ChamadaSecretaria")]
-    //[Authorize(Roles = "secretaria")]
     public IActionResult GetListaChamada()
     {
         var hoje = DateTime.Today;
@@ -415,28 +421,34 @@ Equipe MedifyNow";
     }
 
     //RF10 - Chamada da Secretaria para confirmação de dados do paciente
-    [HttpPost("ChamarPaciente/{id}/chamar")]
-    //[Authorize(Roles = "Secretaria")]
-    public IActionResult ChamarPaciente(int id)
+    [HttpPost("ConfirmacaoDados/{id}")]
+   
+    public IActionResult ConfirmacaoDados(int id, [FromQuery] string? observacoes)
     {
         var agendamento = context.Agendamentos.FirstOrDefault(a => a.Id == id);
 
         if (agendamento == null)
-            return NotFound("Agendamento não encontrado.");
+            return NotFound(new { mensagem = "Agendamento não encontrado." });
 
         if (agendamento.ConfirmacaoChamada == true)
-            return BadRequest("Paciente já foi chamado.");
+            return BadRequest(new { mensagem = "Paciente já foi chamado." });
 
         agendamento.ConfirmacaoChamada = true;
         agendamento.ConfirmacaoComparecimento = DateTime.Now;
+
+        if (!string.IsNullOrEmpty(observacoes))
+        {
+            agendamento.Observacoes = observacoes;
+        }
+
         context.SaveChanges();
 
-        return Ok(new { message = $"Paciente {agendamento.Nome} chamado com sucesso." });
+        return Ok(new { mensagem = $"Paciente {agendamento.Nome} chamado com sucesso." });
     }
 
     //RF12 - Finalizacao de Exame
     [HttpPost("FinalizarExame/{id}")]
-    //[Authorize(Roles = "secretaria")]
+   
     public IActionResult FinalizarExame(int id)
     {
         var agendamento = context.Agendamentos.FirstOrDefault(a => a.Id == id);
@@ -454,5 +466,340 @@ Equipe MedifyNow";
         return Ok(new { message = "Atendimento finalizado com sucesso." });
     }
 
+    //RF13 - Informar Desistencia do paicente
+    [HttpPost("DesistirAtendimento/{id}")]
+   
+    public IActionResult MarcarDesistencia(int id, [FromBody] string motivo)
+    {
+        var agendamento = context.Agendamentos.FirstOrDefault(a => a.Id == id);
 
+        if (agendamento == null)
+            return NotFound("Agendamento não encontrado.");
+
+        if (agendamento.DataHoraDesistencia.HasValue)
+            return BadRequest("Paciente já desistiu.");
+
+        agendamento.DataHoraDesistencia = DateTime.Now;
+        agendamento.MotivoDesistencia = motivo;
+
+        context.SaveChanges();
+
+        return Ok(new { message = "Desistência registrada com sucesso." });
+    }
+
+    //RF03 - Porcentagem de exames realizados
+    [HttpGet("ExamesRealizados")]
+    public async Task<IActionResult> ExamesRealizados()
+    {
+        try
+        {
+            var totalAgendamentos = await context.Agendamentos.CountAsync();
+
+            if (totalAgendamentos == 0)
+            {
+                return Ok(new { porcentagem = 0, mensagem = "Nenhum agendamento encontrado." });
+            }
+
+            var totalRealizados = await context.Agendamentos
+                .Where(a => a.DataHoraFinalizacao != null && (a.Cancelado == false || a.Cancelado == null))
+                .CountAsync();
+
+            var porcentagem = (double)totalRealizados / totalAgendamentos * 100;
+
+            return Ok(new
+            {
+                totalAgendamentos,
+                totalRealizados,
+                porcentagem = Math.Round(porcentagem, 2)
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensagem = "Erro ao calcular a porcentagem.", detalhes = ex.Message });
+        }
+    }
+
+    //RF03 - Tempo Medio de espera
+    [HttpGet("TempoMedio")]
+    public async Task<IActionResult> TempoMedioEspera()
+    {
+        try
+        {
+            var agendamentos = await context.Agendamentos
+                .Where(a => a.DataHoraFinalizacao != null
+                            && (a.Cancelado == false || a.Cancelado == null)
+                            && a.DataHoraFinalizacao >= a.DataHoraExame)
+                .ToListAsync();
+
+            if (agendamentos.Count == 0)
+            {
+                return Ok(new { TempoMedioEspera = 0, mensagem = "Nenhum exame finalizado encontrado ou com dados consistentes." });
+            }
+
+            var temposEspera = agendamentos
+                .Select(a => (a.DataHoraFinalizacao.Value - a.DataHoraExame).TotalMinutes)
+                .ToList();
+
+            var tempoMedio = temposEspera.Average();
+
+            return Ok(new
+            {
+                totalExames = agendamentos.Count,
+                tempoMedioMinutos = Math.Round(tempoMedio, 2)
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensagem = "Erro ao calcular o tempo médio de espera.", detalhes = ex.Message });
+        }
+    }
+
+    //RF09 - Get para todos exames realizados filtrados pelo id do tipo de Exame {id}
+    [HttpGet("AtendimentosRealizados/{id}")]
+    public async Task<IActionResult> GetAtendimentosRealizados(int id)
+    {
+        var tipoExame = await context.TipoExames.FindAsync(id);
+
+        if (tipoExame == null)
+        {
+            return NotFound(new { mensagem = "Tipo de exame não encontrado." });
+        }
+
+        var atendimentos = await context.Agendamentos
+            .Where(a => a.TipoExameId == id && a.DataHoraFinalizacao != null)
+            .Select(a => new AtendimentoRealizadoDto
+            {
+                NomePaciente = a.Nome,
+                DataHoraAgendamento = a.DataHoraExame,
+                DataHoraInicioAtendimento = a.ConfirmacaoComparecimento,
+                DataHoraFinalizacao = a.DataHoraFinalizacao
+            })
+            .ToListAsync();
+
+        return Ok(atendimentos);
+    }
+
+    //RF11 - Lista os agendamentos confirmados do dia, ordenados para chamada
+    [HttpGet("ListaChamada")]
+   
+    public async Task<IActionResult> ListaChamada()
+    {
+        try
+        {
+            var hoje = DateTime.Today;
+
+            var listaChamada = await context.Agendamentos
+                .Where(a => a.DataHoraExame.Date == hoje &&
+                            a.Comparecimento == true &&
+                            a.ConfirmacaoComparecimento != null &&
+                            a.Cancelado != true &&
+                            a.DataHoraDesistencia == null)
+                .OrderBy(a => a.DataHoraExame)
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Nome,
+                    a.CPF,
+                    a.DataHoraExame,
+                    a.TipoExameId,
+                    a.ConfirmacaoChamada
+                })
+                .ToListAsync();
+
+            return Ok(listaChamada);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensagem = "Erro ao buscar a lista de chamada.", detalhes = ex.Message });
+        }
+    }
+
+    //RF11 - Chamar paciente para realizar exame
+    [HttpPost("ChamarPaciente/{id}")]
+   
+    public async Task<IActionResult> ChamarPaciente(int id)
+    {
+        try
+        {
+            var agendamento = await context.Agendamentos.FindAsync(id);
+
+            if (agendamento == null)
+            {
+                return NotFound(new { mensagem = "Agendamento não encontrado." });
+            }
+
+            if (agendamento.Comparecimento != true || agendamento.ConfirmacaoComparecimento == null)
+            {
+                return BadRequest(new { mensagem = "Paciente não está apto para ser chamado." });
+            }
+
+            agendamento.ConfirmacaoChamada = true;
+            agendamento.DataHoraInicial = DateTime.Now;
+
+            context.Agendamentos.Update(agendamento);
+            await context.SaveChangesAsync();
+
+            return Ok(new { mensagem = "Paciente chamado com sucesso." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensagem = "Erro ao chamar paciente.", detalhes = ex.Message });
+        }
+    }
+
+    //RF13 - Desistencia Paciente
+    [HttpPost("DesistirPaciente/{id}")]
+   
+    public async Task<IActionResult> DesistirPaciente(int id, [FromBody] string motivoDesistencia)
+    {
+        try
+        {
+            var agendamento = await context.Agendamentos.FindAsync(id);
+
+            if (agendamento == null)
+            {
+                return NotFound(new { mensagem = "Agendamento não encontrado." });
+            }
+
+            if (agendamento.Comparecimento != true || agendamento.ConfirmacaoComparecimento == null)
+            {
+                return BadRequest(new { mensagem = "Paciente não está apto para desistência." });
+            }
+
+            agendamento.DataHoraDesistencia = DateTime.Now;
+            agendamento.MotivoDesistencia = motivoDesistencia;
+
+            context.Agendamentos.Update(agendamento);
+            await context.SaveChangesAsync();
+
+            return Ok(new { mensagem = "Desistência registrada com sucesso." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensagem = "Erro ao registrar desistência.", detalhes = ex.Message });
+        }
+    }
+
+
+    //RF14 - Informar Ausencia do Paicente
+    [HttpPost("InformarAusencia/{id}")]
+   
+    public async Task<IActionResult> InformarAusencia(int id)
+    {
+        try
+        {
+            var agendamento = await context.Agendamentos.FindAsync(id);
+
+            if (agendamento == null)
+            {
+                return NotFound(new { mensagem = "Agendamento não encontrado." });
+            }
+
+            if (agendamento.Comparecimento == true || agendamento.ConfirmacaoComparecimento != null)
+            {
+                return BadRequest(new { mensagem = "Paciente confirmou presença, não pode ser marcado como ausente." });
+            }
+
+            var tempoDeAtraso = DateTime.Now - agendamento.DataHoraExame;
+
+            var Administrador = context.Administrador.FirstOrDefault();
+            var tempoAtrasoPadrao = TimeSpan.FromMinutes(Administrador!.TempoMaximoAtraso);
+            var tempoMaximo = tempoAtrasoPadrao * 2;
+
+            if (tempoDeAtraso < tempoMaximo)
+            {
+                return BadRequest(new { mensagem = $"Ainda não ultrapassou o tempo de atraso máximo de {tempoMaximo.TotalMinutes} minutos." });
+            }
+
+            agendamento.Cancelado = true;
+            agendamento.MotivoDesistencia = "Ausência";
+            agendamento.DataHoraDesistencia = DateTime.Now;
+
+            context.Agendamentos.Update(agendamento);
+            await context.SaveChangesAsync();
+
+            return Ok(new { mensagem = "Ausência registrada com sucesso." });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensagem = "Erro ao registrar ausência.", detalhes = ex.Message });
+        }
+    }
+
+    //RF15 - Resumo Atividade Diaria
+    [HttpGet("ResumoAtividade")]
+   
+    public async Task<IActionResult> ResumoAtividade(
+    [FromQuery] DateTime? data,
+    [FromQuery] string? cpf,
+    [FromQuery] int? tipoExameId,
+    [FromQuery] string? situacao)
+    {
+        try
+        {
+            var query = context.Agendamentos.AsQueryable();
+
+            if (data.HasValue)
+            {
+                query = query.Where(a => a.DataHoraExame.Date == data.Value.Date);
+            }
+
+            if (!string.IsNullOrEmpty(cpf))
+            {
+                query = query.Where(a => a.CPF == cpf);
+            }
+
+            if (tipoExameId.HasValue)
+            {
+                query = query.Where(a => a.TipoExameId == tipoExameId.Value);
+            }
+
+            if (!string.IsNullOrEmpty(situacao))
+            {
+                switch (situacao.ToLower())
+                {
+                    case "confirmado":
+                        query = query.Where(a => a.Comparecimento == true);
+                        break;
+                    case "cancelado":
+                        query = query.Where(a => a.Cancelado == true && a.MotivoDesistencia != "Ausência");
+                        break;
+                    case "ausente":
+                        query = query.Where(a => a.MotivoDesistencia == "Ausência");
+                        break;
+                    case "pendente":
+                        query = query.Where(a => a.Comparecimento == null && a.Cancelado != true);
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            var agendamentos = await query
+                .Select(a => new
+                {
+                    a.Id,
+                    a.Nome,
+                    a.CPF,
+                    a.Email,
+                    a.DataHoraExame,
+                    TipoExame = a.TipoExame != null ? a.TipoExame.Nome : null,
+                    a.Comparecimento,
+                    a.Cancelado,
+                    a.MotivoDesistencia,
+                    a.ConfirmacaoComparecimento,
+                    a.DataHoraDesistencia,
+                    a.DataHoraInicial,
+                    a.DataHoraFinalizacao,
+                    a.Observacoes
+                })
+                .ToListAsync();
+
+            return Ok(agendamentos);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { mensagem = "Erro ao obter resumo de atividades.", detalhes = ex.Message });
+        }
+    }
 }

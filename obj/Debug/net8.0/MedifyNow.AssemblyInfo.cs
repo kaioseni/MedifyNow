@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MedifyNow")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+93d43e122ee244e568a305e83a7203b1ef885c05")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+317886f2470ea4a67f75c9a62a1ef9a71494951d")]
 [assembly: System.Reflection.AssemblyProductAttribute("MedifyNow")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MedifyNow")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

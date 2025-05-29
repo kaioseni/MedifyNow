@@ -12,7 +12,7 @@ public class TipoExameController : ControllerBase
     {
         context = _context;
     }
-    
+
     //RF04 - Manutenção de tipos de exames - Realiza o get em todos os tipos de exames cadastrados
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TipoExame>>> Get()
@@ -29,7 +29,7 @@ public class TipoExameController : ControllerBase
 
     //RF04 - Manutenção de tipos de exames - Realiza cadastro de um novo tipo de exame
     [HttpPost]
-    public async Task<ActionResult> Post([FromBody]TipoExame item)
+    public async Task<ActionResult> Post([FromBody] TipoExame item)
     {
         try
         {
@@ -50,9 +50,9 @@ public class TipoExameController : ControllerBase
     {
         try
         {
-            if(await context.TipoExames.AnyAsync(p => p.Id == id))
+            if (await context.TipoExames.AnyAsync(p => p.Id == id))
                 return Ok(await context.TipoExames.FindAsync(id));
-            else    
+            else
                 return NotFound("O tipo de exame informado não foi encontrado");
         }
         catch
@@ -67,39 +67,44 @@ public class TipoExameController : ControllerBase
     {
         if (id != model.Id)
             return BadRequest("Tipo de exame inválido");
-    try
-    {   
-        if(!await context.TipoExames.AnyAsync(p => p.Id == id))
-            return NotFound("Tipo de exame inválido");
-        context.TipoExames.Update(model);
-        await context.SaveChangesAsync();
-        return Ok("Tipo de exame salvo com sucesso");
-    }
-     catch
-     {
-        return BadRequest("Erro ao salvar o tipo de exame informado");
-     }   
+        try
+        {
+            if (!await context.TipoExames.AnyAsync(p => p.Id == id))
+                return NotFound("Tipo de exame inválido");
+            context.TipoExames.Update(model);
+            await context.SaveChangesAsync();
+            return Ok("Tipo de exame salvo com sucesso");
+        }
+        catch
+        {
+            return BadRequest("Erro ao salvar o tipo de exame informado");
+        }
     }
 
     //RF04 - Manutenção de tipos de exames - Alterar pois o mesmo nao pode ser excluido caso não haja nenhum agendamento finalizado ou que ainda será atendido
     [HttpDelete("{id}")]
-    public async Task<ActionResult> Delete([FromRoute] int id)
+    public async Task<IActionResult> DeleteTipoExame(int id)
     {
-        try
-        {
-            TipoExame model = await context.TipoExames.FindAsync(id);
+        var tipoExame = await context.TipoExames.FindAsync(id);
 
-            if(model == null)
-                return NotFound("Tipo de exame inválido");
-
-            context.TipoExames.Remove(model);
-            await context.SaveChangesAsync();
-            return Ok("Tipo de exame removido com sucesso");
-        }
-        catch
+        if (tipoExame == null)
         {
-            return BadRequest("Falha ao remover o tipo de exame");
+            return NotFound(new { mensagem = "Tipo de exame não encontrado." });
         }
+
+        // Verifica se existe algum agendamento para este TipoExame
+        var existeAgendamento = await context.Agendamentos
+            .AnyAsync(a => a.TipoExameId == id);
+
+        if (existeAgendamento)
+        {
+            return BadRequest(new { mensagem = "Não é possível excluir: existem agendamentos associados a este tipo de exame." });
+        }
+
+        context.TipoExames.Remove(tipoExame);
+        await context.SaveChangesAsync();
+
+        return Ok(new { mensagem = "Tipo de exame excluído com sucesso." });
     }
-    
+
 }

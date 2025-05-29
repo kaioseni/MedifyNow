@@ -35,5 +35,12 @@ public class Agendamento
     public DateTime? ConfirmacaoComparecimento { get; set; }
     public bool? ConfirmacaoChamada { get; set; }
 
+    public DateTime? DataHoraInicial { get; set; }
     public DateTime? DataHoraFinalizacao { get; set; }
+
+    public DateTime? DataHoraDesistencia { get; set; }
+
+    public string? MotivoDesistencia { get; set; }
+
+    public string? Observacoes { get; set; }
 }
