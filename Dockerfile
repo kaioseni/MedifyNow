@@ -1,18 +1,23 @@
-# Etapa 1: build com SDK .NET 8
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER app
+WORKDIR /app
+EXPOSE 8080
+EXPOSE 8081
+
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["MedifyNow.csproj", "."]
+RUN dotnet restore "./MedifyNow.csproj"
+COPY . .
+WORKDIR "/src/."
+RUN dotnet build "./MedifyNow.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./MedifyNow.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+FROM base AS final
 WORKDIR /app
-
-# Copia o arquivo .csproj e restaura as dependências
-COPY *.csproj ./
-RUN dotnet restore
-
-# Copia o restante dos arquivos e publica
-COPY . ./
-RUN dotnet publish -c Release -o out
-
-# Etapa 2: runtime com ASP.NET .NET 8
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
-WORKDIR /app
-COPY --from=build /app/out .
-
+COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "MedifyNow.dll"]

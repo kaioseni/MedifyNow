@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MedifyNow.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20250528223309_InclusaoCampoMotivoDesistenciaModelAgendamentos")]
-    partial class InclusaoCampoMotivoDesistenciaModelAgendamentos
+    [Migration("20250531203259_MigracaoFinal")]
+    partial class MigracaoFinal
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -93,6 +93,9 @@ namespace MedifyNow.Migrations
                     b.Property<DateTime?>("DataHoraFinalizacao")
                         .HasColumnType("datetime2");
 
+                    b.Property<DateTime?>("DataHoraInicial")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("DataNascimento")
                         .HasColumnType("datetime2");
 
@@ -105,6 +108,9 @@ namespace MedifyNow.Migrations
 
                     b.Property<string>("Nome")
                         .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Observacoes")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("TipoExameId")

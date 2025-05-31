@@ -1,0 +1,21 @@
+services:
+  api:
+    image: api
+    ports:
+      - "5236:8080"
+      - "7157:8081"
+  sgbd:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      - SA_PASSWORD=Senh@123
+      - ACCEPT_EULA=Y
+      - MSSQL_PID=Express
+    ports:
+      - "1433:1433"
+    volumes:
+      - type: volume
+        source: dbdata
+        target: /var/opt/mssql
+volumes:
+  dbdata:
+    driver: local
