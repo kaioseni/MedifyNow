@@ -1,9 +1,15 @@
 services:
+  site:
+    image: site
+    ports:
+      - "5000:3000"
   api:
     image: api
     ports:
       - "5236:8080"
       - "7157:8081"
+    depends_on:
+      - sgbd
   sgbd:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
